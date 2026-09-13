@@ -62,6 +62,8 @@
 
 #ifdef ARCH_ESP32
 #include "freertosinc.h"
+#include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h"
 #if !MESHTASTIC_EXCLUDE_WEBSERVER
 #include "mesh/http/WebServer.h"
 #endif
@@ -370,6 +372,20 @@ void printInfo()
 #ifndef PIO_UNIT_TESTING
 void setup()
 {
+
+#ifdef ARCH_ESP32
+    // Disable the ESP32 hardware brownout detector. Some ESP32-S3 boards
+    // (Heltec Wireless Tracker among them) reset with rst:0xf (BROWNOUT_RST)
+    // specifically when the NimBLE Bluetooth stack powers up the 2.4 GHz
+    // radio, on USB power with no battery buffering the supply. See
+    // meshtastic/firmware#5053 and #4582 - unresolved upstream, cause
+    // unconfirmed (maintainer says the detector fires for real, not a
+    // firmware misdetection; several users report the reboot stops if the
+    // USB shield and antenna are bridged, suggesting a ground/RF path
+    // rather than a logic bug). This silences the reset instead of fixing
+    // the underlying dip.
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+#endif
 
     // initialize power HAL layer as early as possible
     powerHAL_init();
